@@ -81,6 +81,7 @@
 10,C50921,Malignant neoplasm of unspecified site of right male breast,
 10,C50922,Malignant neoplasm of unspecified site of left male breast,
 10,C50929,Malignant neoplasm of unspecified site of unspecified male breast,
+10,C7981,Secondary malignant neoplasm of breast,
 9,174,Malignant neoplasm of female breast,
 9,1740,Malignant neoplasm of nipple and areola of female breast,C50019
 9,1741,Malignant neoplasm of central portion of female breast,C50119
@@ -94,3 +95,4 @@
 9,175,Malignant neoplasm of male breast,
 9,1750,Malignant neoplasm of nipple and areola of male breast,C50029
 9,1759,Malignant neoplasm of other and unspecified sites of male breast,C50929
+9,19881,Secondary malignant neoplasm of breast,C7981
