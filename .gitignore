@@ -165,5 +165,8 @@ cython_debug/
 train.csv
 test.csv
 
+#files
+results.xlsx
+
 #paths
 catboost_info

@@ -117,7 +117,10 @@ def imputeBMI(df, drop_columns, test = pd.DataFrame(), displayRMSE = False):
     X_val = val_data.drop(columns='bmi')
     y_val = val_data['bmi']
 
-    model = CatBoostRegressor(iterations=50, depth=6, learning_rate=0.1, loss_function='RMSE', random_state=42, verbose=0)
+    # cat_features = train_data.select_dtypes(include=['object','category']).columns.tolist()
+
+    model = CatBoostRegressor(iterations=50, depth=6, learning_rate=0.1, loss_function='RMSE', 
+                              random_state=42, verbose=0)
     model.fit(X_train, y_train)
 
     y_val_pred = model.predict(X_val)
@@ -153,7 +156,9 @@ def categorize_bmi(df):
     Creates a new column called bmi_category that adds a category to a patient based on their bmi value
     """
     def get_bmi_category(bmi):
-        if bmi < 18.5:
+        if not bmi:
+            return 'Missing'
+        elif bmi < 18.5:
             return 'Underweight'
         elif 18.5 <= bmi < 25:
             return 'Healthy'
@@ -167,20 +172,17 @@ def categorize_bmi(df):
     
     return df
 
-def cleaning_and_null_handling(train_df, test_df, ICD_codes_df, features=[]):
+def cleaning_and_null_handling(train_df, test_df, ICD_codes_df, features=[], remove_cols = [], 
+                               icd_change = False, age_groups = False, impute_bmi = False, bmi_groups = False):
     """
     Called in Train.ipynb to handle cleaning and null imputation before training.
     Uses the functions above to handle cleaning and null values.
     """
 
-    #create age groups
-    train_df = assign_age_groups(train_df)
-    test_df = assign_age_groups(test_df)
-    print("Age group assignments done.")
-
     #Assign ICD-9 or 10 categories
     train_df = assign_icd_codes(train_df,"breast_cancer_diagnosis_code")
     test_df = assign_icd_codes(test_df,"breast_cancer_diagnosis_code")
+    features.append("ICD_code")
 
     #Fix any description issues
     train_df = replace_words(train_df, "breast_cancer_diagnosis_desc")
@@ -190,9 +192,11 @@ def cleaning_and_null_handling(train_df, test_df, ICD_codes_df, features=[]):
     train_df = update_codes_and_desc(train_df,"breast_cancer_diagnosis_code", "breast_cancer_diagnosis_desc")
     test_df = update_codes_and_desc(test_df,"breast_cancer_diagnosis_code", "breast_cancer_diagnosis_desc")
 
-    #Convert all ICD-9 to 10
-    train_df = update_icd9_to_icd10(train_df,ICD_codes_df, "ICD_code","breast_cancer_diagnosis_code","breast_cancer_diagnosis_desc")
-    test_df = update_icd9_to_icd10(test_df,ICD_codes_df, "ICD_code","breast_cancer_diagnosis_code","breast_cancer_diagnosis_desc")
+    # #Convert all ICD-9 to 10
+    if icd_change:
+        train_df = update_icd9_to_icd10(train_df,ICD_codes_df, "ICD_code","breast_cancer_diagnosis_code","breast_cancer_diagnosis_desc")
+        test_df = update_icd9_to_icd10(test_df,ICD_codes_df, "ICD_code","breast_cancer_diagnosis_code","breast_cancer_diagnosis_desc")
+        features.remove("ICD_code")
     print("breast_cancer_diagnosis_code and breast_cancer_diagnosis_desc cleaning done.")
 
     #Additional data cleaning
@@ -202,30 +206,44 @@ def cleaning_and_null_handling(train_df, test_df, ICD_codes_df, features=[]):
     test_df.loc[(test_df["patient_state"] == "CA") & (test_df["Region"] == "West") & (test_df["Division"] == "Mountain"), "patient_state"] = "AZ"
     test_df = test_df[~((test_df["patient_zip3"] == 630) & (test_df["patient_state"] == "IL"))]
 
+    #Additional null handling
+    train_df.loc[train_df["patient_zip3"] == 361, "Average of Jun-17"] = train_df[train_df["patient_zip3"] == 360]["Average of Jun-17"].iloc[0]
+    test_df.loc[test_df["patient_zip3"] == 361, "Average of Jun-17"] = test_df[test_df["patient_zip3"] == 360]["Average of Jun-17"].iloc[0]
+    
+    train_df.dropna(subset=["income_household_35_to_50"], inplace=True)
+    test_df.dropna(subset=["income_household_35_to_50"], inplace=True)
+
     if features:
         train_df = train_df[features]
         features.remove("metastatic_diagnosis_period")
         test_df = test_df[features]
 
     #Fill missing bmi values using CatBoost
-    if train_df["bmi"].isnull().any():
-        remove_cols = ["age_10_to_19","race_native", "divorced", "metastatic_diagnosis_period", "patient_age","education_graduate"]
-        train_df, test_df = imputeBMI(train_df, remove_cols, test=test_df)
+    if impute_bmi:
+        if train_df["bmi"].isnull().any():
+            train_df, test_df = imputeBMI(train_df, remove_cols, test=test_df)
+            print("BMI imputation done.")
 
     #Categorize bmi
-    train_df = categorize_bmi(train_df)
-    test_df = categorize_bmi(test_df)
+    if bmi_groups:
+        train_df = categorize_bmi(train_df)
+        test_df = categorize_bmi(test_df)
 
-    #Drop patient_age and bmi
-    train_df = train_df.drop(columns=["bmi","patient_age"])
-    test_df = test_df.drop(columns=["bmi","patient_age"])
-    print("BMI imputation and categorization done.")
+        #Drop bmi
+        train_df = train_df.drop(columns=["bmi"])
+        test_df = test_df.drop(columns=["bmi"])
 
-    #Additional null handling
-    train_df.loc[train_df["patient_zip3"] == 361, "Average of Jun-17"] = train_df[train_df["patient_zip3"] == 360]["Average of Jun-17"].iloc[0]
-    train_df.dropna(subset=["income_household_35_to_50"], inplace=True)
+        print("BMI categorization done.")
 
-    test_df.loc[test_df["patient_zip3"] == 361, "Average of Jun-17"] = test_df[test_df["patient_zip3"] == 360]["Average of Jun-17"].iloc[0]
-    test_df.dropna(subset=["income_household_35_to_50"], inplace=True)
+    #create age groups
+    if age_groups:
+        train_df = assign_age_groups(train_df)
+        test_df = assign_age_groups(test_df)
+
+        #Drop patient_age
+        train_df = train_df.drop(columns=["patient_age"])
+        test_df = test_df.drop(columns=["patient_age"])
+
+        print("Age group assignments done.")
 
     return train_df, test_df
