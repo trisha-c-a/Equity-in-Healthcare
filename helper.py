@@ -12,6 +12,72 @@ from sklearn.metrics import root_mean_squared_error
 from sklearn.preprocessing import LabelEncoder
 from catboost import CatBoostRegressor
 
+import dcor
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+def distanceCorrelation(df, target_column, categorical_columns, threshold1=0.4, threshold2=0.05):
+
+    """
+    Calculates distance correlation for every feature against the target variable.
+    Also displays 2 plots showcasing the top features based on a threshold.
+    Input: dataframe, name of the target_column, list of categorical columns, threshold1 and 2 to display the top features
+    Output: returns a correlation dataframe containing the feature name and it's correlation value
+    """
+    
+    cols = [col for col in df.columns if col != target_column]
+    
+    corr_values = []
+    
+    for col in cols:
+        x = df[target_column]
+        y = df[col]
+        
+        corr = dcor.distance_correlation(x, y)
+        
+        corr_values.append((col, corr))
+    
+    corr_df = pd.DataFrame(corr_values, columns=["Feature", "Correlation"])
+    
+    filtered_corr_df = corr_df[corr_df["Correlation"] > threshold1]
+    
+    if filtered_corr_df.empty:
+        print(f"No columns have a distance correlation value above {threshold1} with {target_column}.")
+        return
+    
+    filtered_corr_df = filtered_corr_df.sort_values(by="Correlation", ascending=False)
+    
+    plt.figure(figsize=(5,3))
+    sns.barplot(x="Correlation", y="Feature", data=filtered_corr_df, palette="coolwarm")
+    plt.title(f'Columns with Distance Correlation Above {threshold1} with {target_column}')
+    plt.show()
+
+    dummy_prefixes = categorical_columns
+    averaged_corr_values = {}
+
+    og_corr_df = corr_df.copy()
+
+    for prefix in dummy_prefixes:
+        dummy_cols = corr_df[corr_df["Feature"].str.startswith(prefix)]
+        if not dummy_cols.empty:
+            avg_corr = dummy_cols["Correlation"].mean()
+            averaged_corr_values[prefix] = avg_corr
+            corr_df = corr_df[~corr_df["Feature"].str.startswith(prefix)]
+
+    avg_corr_df = pd.DataFrame(averaged_corr_values.items(), columns=["Feature", "Correlation"])
+
+    corr_df = pd.concat([corr_df, avg_corr_df], ignore_index=True)
+
+    filtered_corr_df = corr_df[corr_df["Correlation"] > threshold2]
+    
+    filtered_corr_df = filtered_corr_df.sort_values(by="Correlation", ascending=False)
+    
+    plt.figure(figsize=(5,3))
+    sns.barplot(x="Correlation", y="Feature", data=filtered_corr_df, palette="coolwarm")
+    plt.title(f'Columns with Distance Correlation Above {threshold2} with {target_column} after grouping')
+    plt.show()
+    return og_corr_df
+
 def assign_age_groups(df):
     """
     Creates a column called age_group and assign each patient a group based on the value in patient_age
@@ -35,6 +101,22 @@ def assign_icd_codes(df, column_name):
 
     df['ICD_code'] = df[column_name].apply(assign_icd_code)
     return df
+
+def metastatic_cancer_diagnosis_desc(df):
+    """
+    Adds metastatic diagnosis descriptions based on the 1st 3 digits in the provided metastatic diagnosis code.
+    Description taken from: https://www.icd10data.com/ICD10CM/Codes/C00-D49/C76-C80
+    """
+    code_to_desc = {
+    'C76': 'Malignant neoplasm of other and ill-defined sites',
+    'C77': 'Secondary and unspecified malignant neoplasm of lymph nodes',
+    'C78': 'Secondary malignant neoplasm of respiratory and digestive organs',
+    'C79': 'Secondary malignant neoplasm of other and unspecified sites',
+    'C80': 'Malignant neoplasm without specification of site',
+}
+    df['metastatic_cancer_diagnosis_desc'] = df['metastatic_cancer_diagnosis_code'].str[:3].map(code_to_desc)
+    return df
+
 
 def replace_words(df, column_name):
     """
@@ -175,7 +257,7 @@ def categorize_bmi(df):
 def cleaning_and_null_handling(train_df, test_df, ICD_codes_df, features=[], remove_cols = [], 
                                icd_change = False, age_groups = False, impute_bmi = False, bmi_groups = False):
     """
-    Called in Train.ipynb to handle cleaning and null imputation before training.
+    Called in Train.ipynb to handle cleaning and null imputation before training, validation and submission.
     Uses the functions above to handle cleaning and null values.
     """
 
@@ -198,6 +280,12 @@ def cleaning_and_null_handling(train_df, test_df, ICD_codes_df, features=[], rem
         test_df = update_icd9_to_icd10(test_df,ICD_codes_df, "ICD_code","breast_cancer_diagnosis_code","breast_cancer_diagnosis_desc")
         features.remove("ICD_code")
     print("breast_cancer_diagnosis_code and breast_cancer_diagnosis_desc cleaning done.")
+
+    #Assign metastatic descriptions
+    train_df = metastatic_cancer_diagnosis_desc(train_df)
+    test_df = metastatic_cancer_diagnosis_desc(test_df)
+    features.append("metastatic_cancer_diagnosis_desc")
+    print("Assigned metastatic descriptions")
 
     #Additional data cleaning
     train_df.loc[(train_df["patient_state"] == "CA") & (train_df["Region"] == "West") & (train_df["Division"] == "Mountain"), "patient_state"] = "AZ"
