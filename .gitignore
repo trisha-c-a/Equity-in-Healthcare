@@ -167,6 +167,7 @@ test.csv
 
 #files
 results.xlsx
+dataAnalysis.twb
 
 #paths
 catboost_info
