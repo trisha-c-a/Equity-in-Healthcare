@@ -2,7 +2,7 @@
 
 The goal of this [regression analysis problem](https://www.kaggle.com/competitions/widsdatathon2024-challenge2/overview) was to predict the duration of time it takes for patients to receive a metastatic cancer diagnosis given that they have already been diagnosed with breast cancer. The second goal was to determine if a relationship exists between climate patterns and a patient receiving a timely diagnosis.
 
-This repository has been used to tackle the first problem. Additionally, a [dashboard](https://public.tableau.com/views/EquityInHealthcare/Dashboard2?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link) was created using Tableau to some of the features in the dataset.
+This repository has been used to tackle the first problem. Additionally, a [dashboard](https://public.tableau.com/views/EquityInHealthcare/Dashboard2?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link) was created using Tableau to visualize a subset of the features in the dataset.
 
 ## Results
 
