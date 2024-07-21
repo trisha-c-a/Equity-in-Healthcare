@@ -1,8 +1,8 @@
 # Equity in Healthcare—WiDS Datathon 2024 Challenge #2
 
-The goal of this [regression analysis problem](https://www.kaggle.com/competitions/widsdatathon2024-challenge2/overview) was to predict the duration of time it takes for patients to receive a metastatic cancer diagnosis given that they have already been diagnosed with breast cancer. The second goal was to determine if a relationship exists between climate patterns and a patient receiving a timely diagnosis.
+The goal of this [regression analysis problem](https://www.kaggle.com/competitions/widsdatathon2024-challenge2/overview) was to predict the duration of time it takes for patients to receive a metastatic cancer diagnosis given that they have already been diagnosed with breast cancer.
 
-This repository has been used to tackle the first problem. Additionally, a [dashboard](https://public.tableau.com/views/EquityInHealthcare/Dashboard2?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link) was created using Tableau to visualize a subset of the features in the dataset.
+This repository has been used to tackle the above problem. Additionally, a [dashboard](https://public.tableau.com/views/EquityInHealthcare/Dashboard2?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link) was created using Tableau to visualize a subset of the features in the dataset.
 
 ## Results
 
@@ -34,8 +34,3 @@ pip install -r requirements.txt
 - Run EDA.ipynb to perform an exploratory data analysis
 - To perform training, modify Train.ipynb or simply run the existing notebook to replicate the latest result available in this repository
 - To generate [cleaned_data.csv](https://github.com/trisha-c-a/Equity-in-Healthcare/blob/main/cleaned_data.csv), simply modify the list "features", if required, and run the file.
-
-## Current Tasks
-
-- [ ] Determine if weather patterns affect diagnosis
-- [ ] Understand the outliers present in ICD-10 codes and work towards fixing them

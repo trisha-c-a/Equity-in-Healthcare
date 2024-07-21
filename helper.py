@@ -254,8 +254,30 @@ def categorize_bmi(df):
     
     return df
 
+def categorize_temperatures(df):
+    temp_columns = [col for col in df.columns if col.startswith("Average of") and int(col[-2:]) in range(13, 19)]
+
+    # Calculate the mean temperature for each row for each year YY from '13 to '18
+    for year in range(13, 19):
+        cols_for_year = [col for col in temp_columns if col.endswith("-{:02}".format(year))]
+        df["mean_temp_{:02}".format(year)] = df[cols_for_year].mean(axis=1).round(2)
+
+    # Define bins and labels for temperature categorization
+    bins = [-float('inf'), 40, 50, 60, 70, float('inf')]
+    labels = ['<40', '40-50', '50-60', '60-70', '>70']
+
+    def categorize_temp(temp):
+        return pd.cut(temp, bins=bins, labels=labels)
+
+    # Apply categorization to each mean_temp_YY column
+    for year in range(13, 19):
+        col_name = "mean_temp_{:02}".format(year)
+        df["temp_categories_{:02}".format(year)] = categorize_temp(df[col_name])
+
+    return df
+
 def cleaning_and_null_handling(train_df, test_df, ICD_codes_df, features=[], remove_cols = [], 
-                               icd_change = False, age_groups = False, impute_bmi = False, bmi_groups = False):
+                               icd_change = False, age_groups = False, impute_bmi = False, bmi_groups = False, categorize_temp = False):
     """
     Called in Train.ipynb to handle cleaning and null imputation before training, validation and submission.
     Uses the functions above to handle cleaning and null values.
@@ -333,5 +355,10 @@ def cleaning_and_null_handling(train_df, test_df, ICD_codes_df, features=[], rem
         test_df = test_df.drop(columns=["patient_age"])
 
         print("Age group assignments done.")
+    
+    if categorize_temp:
+        train_df = categorize_temperatures(train_df)
+        test_df = categorize_temperatures(test_df)
+        print("Temperature groups assigned.")
 
     return train_df, test_df
